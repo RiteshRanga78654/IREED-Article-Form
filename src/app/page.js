@@ -9,6 +9,10 @@ import { useRef, useState, useEffect } from "react";
 import { IoIosArrowForward, IoIosArrowBack } from "react-icons/io";
 import LogoGrid from "./components/industryPartner";
 import Swal from "sweetalert2";
+import dynamic from 'next/dynamic';
+
+// Dynamically import JoditEditor to avoid SSR issues
+const JoditEditor = dynamic(() => import('jodit-react'), { ssr: false });
 
 export default function Home() {
   //upload photo and article file state
@@ -29,13 +33,41 @@ export default function Home() {
     linkedinId: "", // ✅ changed to match API exactly
     title: "",
     article: "",
-    category: "", // ✅ added required field
+    category: "",
+    attachedPdf: "", // ✅ added required field
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // File size limit (5MB in bytes)
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+  // Jodit editor ref
+  const editor = useRef(null);
+
+  // Jodit editor config
+  const config = {
+    readonly: false,
+    height: 400,
+    placeholder: 'Article (max 2000 words)*',
+    maxLength: 2000,
+    toolbar: true,
+    spellcheck: true,
+    language: 'en',
+    toolbarButtonSize: 'medium',
+    theme: 'default',
+    saveModeInCookie: false,
+    buttons: [
+      'source', '|',
+      'bold', 'italic', 'underline', '|',
+      'ul', 'ol', '|',
+      'font', 'fontsize', 'brush', 'paragraph', '|',
+      'align', '|',
+      'undo', 'redo', '|',
+      'hr', 'link', 'table', '|',
+      'fullsize'
+    ]
+  };
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -46,6 +78,14 @@ export default function Home() {
     }));
   };
 
+  // Handle Jodit editor changes
+  const handleEditorChange = (content) => {
+    setFormData((prev) => ({
+      ...prev,
+      article: content,
+    }));
+  };
+
   // ✅ Universal upload function for both images and files
   const handleFileUpload = async (file, fileType = "image") => {
     if (!file) return { url: "", filename: "" };
@@ -53,7 +93,7 @@ export default function Home() {
     try {
       console.log(`📎 Uploading ${fileType}:`, file.name);
       const fileFormData = new FormData();
-      
+
       // Use same field name for both image and file uploads
       fileFormData.append("image", file);
 
@@ -68,15 +108,15 @@ export default function Home() {
       if (uploadRes.ok) {
         const uploadData = await uploadRes.json();
         console.log("✅ Upload response:", uploadData);
-        
+
         // Extract URL and filename from the API response structure
         const uploadedUrl = uploadData.file?.url || "";
         const uploadedFilename = uploadData.file?.filename || "";
-          
+
         console.log(`✅ ${fileType} uploaded successfully:`);
         console.log(`   URL: ${uploadedUrl}`);
         console.log(`   Filename: ${uploadedFilename}`);
-        
+
         return { url: uploadedUrl, filename: uploadedFilename };
       } else {
         const errorText = await uploadRes.text();
@@ -93,45 +133,47 @@ export default function Home() {
   const checkFileSize = (file, maxSize = MAX_FILE_SIZE) => {
     if (file.size > maxSize) {
       const maxSizeMB = maxSize / (1024 * 1024);
-      throw new Error(`File size exceeds ${maxSizeMB}MB limit. Please choose a smaller file.`);
+      throw new Error(
+        `File size exceeds ${maxSizeMB}MB limit. Please choose a smaller file.`
+      );
     }
   };
 
   // ✅ SweetAlert helper functions
   const showSuccessAlert = (title, text) => {
     Swal.fire({
-      icon: 'success',
+      icon: "success",
       title: title,
       text: text,
-      confirmButtonColor: '#2563eb',
-      confirmButtonText: 'Great!'
+      confirmButtonColor: "#2563eb",
+      confirmButtonText: "Great!",
     });
   };
 
   const showErrorAlert = (title, text) => {
     Swal.fire({
-      icon: 'error',
+      icon: "error",
       title: title,
       text: text,
-      confirmButtonColor: '#dc2626',
-      confirmButtonText: 'Try Again'
+      confirmButtonColor: "#dc2626",
+      confirmButtonText: "Try Again",
     });
   };
 
   const showWarningAlert = (title, text) => {
     Swal.fire({
-      icon: 'warning',
+      icon: "warning",
       title: title,
       text: text,
-      confirmButtonColor: '#f59e0b',
-      confirmButtonText: 'Okay'
+      confirmButtonColor: "#f59e0b",
+      confirmButtonText: "Okay",
     });
   };
 
   // Handle photo selection and immediate upload
   const handlePhotoChange = async (e) => {
     const selectedFile = e.target.files[0];
-    
+
     if (!selectedFile) {
       setPhoto(null);
       setUploadedImageUrl("");
@@ -142,7 +184,7 @@ export default function Home() {
     try {
       // Check file size
       checkFileSize(selectedFile);
-      
+
       setPhoto(selectedFile);
       setIsUploadingImage(true);
 
@@ -154,7 +196,7 @@ export default function Home() {
     } catch (error) {
       console.error("❌ Failed to upload image:", error);
       showErrorAlert(
-        'Upload Failed!', 
+        "Upload Failed!",
         error.message || "Failed to upload image. Please try again."
       );
       setPhoto(null);
@@ -169,7 +211,7 @@ export default function Home() {
   // ✅ Handle attached file selection and upload
   const handleAttachedFileChange = async (e) => {
     const selectedFile = e.target.files[0];
-    
+
     if (!selectedFile) {
       setArticleFile(null);
       setUploadedFileUrl("");
@@ -180,7 +222,7 @@ export default function Home() {
     try {
       // Check file size
       checkFileSize(selectedFile);
-      
+
       setArticleFile(selectedFile);
       setIsUploadingFile(true);
 
@@ -192,7 +234,7 @@ export default function Home() {
     } catch (error) {
       console.error("❌ Failed to upload file:", error);
       showErrorAlert(
-        'Upload Failed!', 
+        "Upload Failed!",
         error.message || "Failed to upload file. Please try again."
       );
       setArticleFile(null);
@@ -205,6 +247,7 @@ export default function Home() {
   };
 
   // ✅ Form Submit
+  // ✅ Form Submit - Modified to send only filenames
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -224,8 +267,8 @@ export default function Home() {
           formData.article.length > 200
             ? formData.article.substring(0, 200) + "..."
             : formData.article,
-        uploadPhoto: uploadedImageUrl || "", // ✅ Image URL from Vercel Blob
-        uploadPhotoFilename: uploadedImageFilename || "", // ✅ Image filename from Vercel Blob
+        uploadPhoto: uploadedImageFilename || "", // ✅ Changed: Send only filename instead of URL
+        // uploadPhotoFilename: uploadedImageFilename || "", // ✅ Removed: No longer needed since we're using uploadPhoto for filename
         name: formData.name,
         designation: formData.designation,
         linkedinId: formData.linkedinId,
@@ -233,16 +276,15 @@ export default function Home() {
         category: formData.category,
         status: "published",
         isPublished: true,
-        attachedFileName: uploadedFileFilename || "", // ✅ Use server filename instead of original
-        attachedFileUrl: uploadedFileUrl || "", // ✅ File URL from Vercel Blob
-        attachedFileOriginalName: articleFile?.name || "", // ✅ Original file name for reference
+        attachedPdf: uploadedFileFilename || "", // ✅ Keep this as is - already sending filename only
       };
 
       console.log("📤 Sending article data:", articleData);
-      console.log("🖼️  uploadPhoto value:", uploadedImageUrl);
-      console.log("🖼️  uploadPhotoFilename:", uploadedImageFilename);
-      console.log("📎 attachedFileUrl value:", uploadedFileUrl);
-      console.log("📎 attachedFileName value:", uploadedFileFilename);
+      console.log(
+        "🖼️  uploadPhoto value (filename only):",
+        uploadedImageFilename
+      );
+      console.log("📎 attachedPdf value:", uploadedFileFilename);
 
       const res = await fetch(
         "https://ireed-articles-service.vercel.app/v1/articles",
@@ -264,11 +306,11 @@ export default function Home() {
 
       const data = await res.json();
       console.log("✅ Article submitted:", data);
-      
+
       // ✅ SweetAlert success message
       showSuccessAlert(
-        'Article Submitted Successfully!',
-        'Your article has been published and will appear on the website shortly.'
+        "Article Submitted Successfully!",
+        "Your article has been published and will appear on the website shortly."
       );
 
       // Reset form
@@ -280,6 +322,7 @@ export default function Home() {
         title: "",
         article: "",
         category: "",
+        attachedPdf: "",
       });
       setPhoto(null);
       setArticleFile(null);
@@ -294,8 +337,9 @@ export default function Home() {
     } catch (err) {
       console.error("💥 Submission error:", err);
       showErrorAlert(
-        'Submission Failed!',
-        err.message || 'Something went wrong while submitting your article. Please try again.'
+        "Submission Failed!",
+        err.message ||
+          "Something went wrong while submitting your article. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -366,11 +410,11 @@ export default function Home() {
 
   // ✅ Format file size for display
   const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   return (
@@ -516,8 +560,8 @@ export default function Home() {
 
               <div className="text-center mt-6">
                 <a
-                  href="/articles"
-                  className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+                  href="https://www.ireedindia.com/articles"
+                  className="inline-block px-6 py-2 bg-[#2a3290] text-white rounded-lg shadow hover:bg-blue-700 transition"
                 >
                   View All
                 </a>
@@ -567,16 +611,24 @@ export default function Home() {
                 required
               />
 
-              <input
-                className="w-full h-10 border py-6 px-2 rounded"
-                placeholder="Category*"
-                type="text"
+              <select
+                className="w-full h-10 border py-2 px-2 rounded bg-white"
                 name="category"
                 id="category"
                 value={formData.category}
                 onChange={handleInputChange}
                 required
-              />
+              >
+                {/* Placeholder */}
+                <option value="" disabled hidden>
+                  Select Category*
+                </option>
+
+                <option value="tech">Tech</option>
+                <option value="business">Business</option>
+                <option value="lifestyle">Lifestyle</option>
+              </select>
+
               <input
                 className="w-full h-10 border py-6 px-2 rounded"
                 placeholder="Company*"
@@ -598,16 +650,18 @@ export default function Home() {
                 onChange={handleInputChange}
                 required
               />
-              <textarea
-                className="w-full h-40 border py-6 px-2 rounded resize-none"
-                placeholder="Article (max 2000 words)*"
-                name="article"
-                id="article"
-                maxLength={2000}
-                value={formData.article}
-                onChange={handleInputChange}
-                required
-              ></textarea>
+
+              {/* Jodit Editor replacing textarea */}
+              <div className="w-full border rounded">
+                <JoditEditor
+                  ref={editor}
+                  value={formData.article}
+                  config={config}
+                  tabIndex={1}
+                  onBlur={handleEditorChange}
+                  onChange={() => {}}
+                />
+              </div>
 
               {/* Upload Photo */}
               <div className="relative w-full">
@@ -624,19 +678,17 @@ export default function Home() {
                   className="flex justify-between items-center w-full h-10 border py-6 px-2 rounded text-gray-500 cursor-pointer hover:border-blue-500"
                 >
                   <span>
-                    {photo ? (
-                      isUploadingImage ? (
-                        `⏳ Uploading ${photo.name}...`
-                      ) : uploadedImageUrl ? (
-                        `✅ ${photo.name} (${formatFileSize(photo.size)}) - Uploaded`
-                      ) : (
-                        `❌ ${photo.name} - Upload failed`
-                      )
-                    ) : (
-                      "Upload Photo (Max 5MB)"
-                    )}
+                    {photo
+                      ? isUploadingImage
+                        ? `⏳ Uploading ${photo.name}...`
+                        : uploadedImageUrl
+                        ? `✅ ${photo.name} (${formatFileSize(
+                            photo.size
+                          )}) - Uploaded`
+                        : `❌ ${photo.name} - Upload failed`
+                      : "Upload Photo (Max 5MB)"}
                   </span>
-                  <span className="text-blue-600">Choose Image</span>
+                  <span className="text-[#2a3290]">Choose Image</span>
                 </label>
               </div>
 
@@ -655,19 +707,17 @@ export default function Home() {
                   className="flex justify-between items-center w-full h-10 border py-6 px-2 rounded text-gray-500 cursor-pointer hover:border-blue-500"
                 >
                   <span>
-                    {articleFile ? (
-                      isUploadingFile ? (
-                        `⏳ Uploading ${articleFile.name}...`
-                      ) : uploadedFileUrl ? (
-                        `✅ ${articleFile.name} (${formatFileSize(articleFile.size)}) - Uploaded`
-                      ) : (
-                        `❌ ${articleFile.name} - Upload failed`
-                      )
-                    ) : (
-                      "Attach Article File (Max 5MB)"
-                    )}
+                    {articleFile
+                      ? isUploadingFile
+                        ? `⏳ Uploading ${articleFile.name}...`
+                        : uploadedFileUrl
+                        ? `✅ ${articleFile.name} (${formatFileSize(
+                            articleFile.size
+                          )}) - Uploaded`
+                        : `❌ ${articleFile.name} - Upload failed`
+                      : "Attach Article File (Max 5MB)"}
                   </span>
-                  <span className="text-blue-600">Upload File</span>
+                  <span className="text-[#2a3290]">Upload File</span>
                 </label>
               </div>
 
@@ -677,15 +727,14 @@ export default function Home() {
                 className={`w-32 h-10 border-1 ${
                   isSubmitting || isUploadingImage || isUploadingFile
                     ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-gray-100 hover:text-blue-600 hover:cursor-pointer"
+                    : "bg-[#2a3290] hover:bg-gray-100 hover:text-[#2a3290] hover:cursor-pointer"
                 } text-white flex items-center justify-center mx-auto rounded transition`}
               >
-                {isSubmitting 
-                  ? "Submitting..." 
-                  : isUploadingImage || isUploadingFile 
-                    ? "Uploading..." 
-                    : "Submit"
-                }
+                {isSubmitting
+                  ? "Submitting..."
+                  : isUploadingImage || isUploadingFile
+                  ? "Uploading..."
+                  : "Submit"}
               </button>
             </form>
           </div>
@@ -725,6 +774,12 @@ export default function Home() {
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
           overflow: hidden;
+        }
+
+        /* Jodit Editor Styles */
+        .jodit-container {
+          border: 1px solid #d1d5db;
+          border-radius: 0.375rem;
         }
       `}</style>
     </div>
