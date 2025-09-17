@@ -49,8 +49,7 @@ export default function Home() {
   const config = {
     readonly: false,
     height: 400,
-    placeholder: 'Article (max 2000 words)*',
-    maxLength: 2000,
+    placeholder: 'Article Description',
     toolbar: true,
     spellcheck: true,
     language: 'en',
