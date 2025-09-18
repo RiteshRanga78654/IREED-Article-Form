@@ -198,7 +198,7 @@ export default function PostedArticles() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Enhanced Header */}
           <div className="text-center mb-8 lg:mb-12">
-            <div className="inline-flex items-center justify-center p-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full mb-4">
+            {/* <div className="inline-flex items-center justify-center p-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full mb-4">
               <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-lg">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-semibold text-gray-700">
@@ -206,7 +206,7 @@ export default function PostedArticles() {
                 </span>
                 <TrendingUp className="w-4 h-4 text-green-500" />
               </div>
-            </div>
+            </div> */}
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4">
               <span className="bg-gradient-to-r from-gray-900 via-blue-900 to-[#2a3290] bg-clip-text text-transparent">
