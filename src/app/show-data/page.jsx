@@ -1,7 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
 import {
   Loader2,
   Calendar,
@@ -11,46 +9,118 @@ import {
   Heart,
   ExternalLink,
   Clock,
+  AlertTriangle,
+  RefreshCw,
+  BookOpen,
+  TrendingUp,
+  Search,
+  Filter,
 } from "lucide-react";
-import Link from "next/link";
-import dayjs from "dayjs";
 
 export default function PostedArticles() {
   const [postedData, setPostedData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const router = useRouter();
+  const [deleteLoading, setDeleteLoading] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredData, setFilteredData] = useState([]);
+  const [debugMode, setDebugMode] = useState(false);
 
   useEffect(() => {
     fetchPostedData();
   }, []);
 
+  useEffect(() => {
+    const filtered = postedData.filter(
+      (post) =>
+        post.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredData(filtered);
+  }, [postedData, searchTerm]);
+
   const fetchPostedData = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      console.log("🔄 Starting API call...");
+
       const res = await fetch(
         "https://ireed-articles-service.vercel.app/v1/articles?pageNumber=0&size=15",
-        { method: "GET", headers: { "Content-Type": "application/json" } }
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          // Add CORS mode if needed
+          mode: "cors",
+        }
       );
-      if (!res.ok) throw new Error("Failed to fetch posted data");
-      const data = await res.json();
 
-      if (Array.isArray(data)) setPostedData(data);
-      else if (data.articles) setPostedData(data.articles);
-      else if (data.data) setPostedData(data.data);
-      else if (data.content) setPostedData(data.content);
-      else setPostedData([]);
+      console.log("📡 Response status:", res.status);
+      console.log(
+        "📡 Response headers:",
+        Object.fromEntries(res.headers.entries())
+      );
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("❌ API Error:", errorText);
+        throw new Error(
+          `HTTP ${res.status}: ${res.statusText || "Failed to fetch data"}`
+        );
+      }
+
+      const data = await res.json();
+      console.log("📊 Raw API response:", data);
+      console.log("📊 Data type:", typeof data);
+      console.log("📊 Is array?", Array.isArray(data));
+
+      let articles = [];
+
+      if (Array.isArray(data)) {
+        articles = data;
+      } else if (data && typeof data === "object") {
+        // Check various possible response structures
+        if (data.articles && Array.isArray(data.articles)) {
+          articles = data.articles;
+        } else if (data.data && Array.isArray(data.data)) {
+          articles = data.data;
+        } else if (data.content && Array.isArray(data.content)) {
+          articles = data.content;
+        } else if (data.results && Array.isArray(data.results)) {
+          articles = data.results;
+        } else if (data.items && Array.isArray(data.items)) {
+          articles = data.items;
+        } else {
+          console.log("📊 Available data keys:", Object.keys(data));
+        }
+      }
+
+      console.log("✅ Final articles array:", articles);
+      console.log("✅ Articles count:", articles.length);
+
+      setPostedData(articles);
     } catch (err) {
-      setError(err.message);
+      console.error("💥 Fetch error:", err);
+      setError(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   const deleteArticle = async (id) => {
-    if (!confirm("Are you sure you want to delete this article?")) return;
+    if (
+      !confirm(
+        "Are you sure you want to delete this article? This action cannot be undone."
+      )
+    )
+      return;
+
     try {
+      setDeleteLoading(id);
       const res = await fetch(
         `https://ireed-articles-service.vercel.app/v1/articles/${id}`,
         {
@@ -62,17 +132,19 @@ export default function PostedArticles() {
       setPostedData((prev) => prev.filter((a) => a._id !== id));
       alert("Article deleted successfully!");
     } catch (err) {
-      alert(err.message);
+      alert("Error deleting article: " + err.message);
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
   const getImageUrl = (path) => {
-    if (!path) return "/assets/image/placeholder.jpg";
+    if (!path) return "/api/placeholder/400/300";
     if (path.startsWith("http://") || path.startsWith("https://")) return path;
     return `https://ireed-articles-service.vercel.app/image/${path}`;
   };
 
-  const truncateText = (text, maxLength = 120) => {
+  const truncateText = (text, maxLength = 150) => {
     if (!text) return "No content available.";
     const cleanText = text.replace(/<[^>]*>/g, "");
     return cleanText.length > maxLength
@@ -81,214 +153,350 @@ export default function PostedArticles() {
   };
 
   const getReadingTime = (text) => {
-    // if (!text) return "1 min read";
+    if (!text) return "1 min read";
     const cleanText = text.replace(/<[^>]*>/g, "");
     const words = cleanText.split(" ").length;
-    const readingTime = Math.ceil(words / 200); // 200 words per minute
+    const readingTime = Math.ceil(words / 200);
     return `${readingTime} min read`;
   };
 
+  const testConnection = async () => {
+    console.log("🔍 Testing connection...");
+    try {
+      // Test basic connectivity first
+      const testRes = await fetch("https://httpbin.org/json", { mode: "cors" });
+      console.log("✅ Internet connection OK");
+
+      // Test the API endpoint without parsing
+      const apiTest = await fetch(
+        "https://ireed-articles-service.vercel.app/v1/articles?pageNumber=0&size=1"
+      );
+      console.log("🌐 API endpoint response status:", apiTest.status);
+      console.log("🌐 API endpoint accessible:", apiTest.ok);
+    } catch (err) {
+      console.error("❌ Connection test failed:", err);
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "No date";
+    const dateObj = new Date(date);
+    const options = { year: "numeric", month: "short", day: "numeric" };
+    return dateObj.toLocaleDateString("en-US", options);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      {/* Animated background elements */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Enhanced animated background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-40 left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-r from-blue-300 to-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-r from-pink-300 to-orange-300 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-green-300 to-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-4000"></div>
       </div>
 
-      <div className="relative z-10 py-8 sm:py-12 lg:py-20">
-        {/* Container with responsive padding */}
+      <div className="relative z-10 py-6 sm:py-8 lg:py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header Section */}
-          <div className="text-center mb-12 lg:mb-20">
-            <div className="inline-flex items-center justify-center p-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full mb-6">
-              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-gray-600">
+          {/* Enhanced Header */}
+          <div className="text-center mb-8 lg:mb-12">
+            <div className="inline-flex items-center justify-center p-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full mb-4">
+              <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-lg">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-semibold text-gray-700">
                   Live Articles
                 </span>
+                <TrendingUp className="w-4 h-4 text-green-500" />
               </div>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6">
-              <span className="bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 bg-clip-text text-transparent">
-                Your Posted
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4">
+              <span className="bg-gradient-to-r from-gray-900 via-blue-900 to-[#2a3290] bg-clip-text text-transparent">
+                Article Collection
               </span>
-              <br />
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Articles
-              </span>
+              {/* <br /> */}
+              {/* <span className="bg-gradient-to-r from-blue-600 to-[#2a3290] bg-clip-text text-transparent">
+              {""}Collection
+              </span> */}
             </h1>
 
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent w-20"></div>
-              <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
-              <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent w-20"></div>
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent w-16"></div>
+              <BookOpen className="w-6 h-6 text-blue-500" />
+              <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent w-16"></div>
             </div>
 
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              Discover, manage, and share your published content with the world
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              Manage, explore, and share your published content with the world
             </p>
+
+            {/* Search Bar */}
+            <div className="max-w-md mx-auto mt-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search articles or authors..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-lg transition-all duration-300"
+                />
+              </div>
+            </div>
           </div>
+
+          {/* Debug Panel */}
+          {debugMode && (
+            <div className="bg-gray-900 text-green-400 p-4 rounded-xl mb-8 font-mono text-sm max-h-60 overflow-y-auto">
+              <h4 className="text-white font-bold mb-2">
+                🐛 Debug Information:
+              </h4>
+              <div>
+                API URL:
+                https://ireed-articles-service.vercel.app/v1/articles?pageNumber=0&size=15
+              </div>
+              <div>Loading: {loading.toString()}</div>
+              <div>Error: {error || "None"}</div>
+              <div>Raw Data Count: {postedData.length}</div>
+              <div>Filtered Data Count: {filteredData.length}</div>
+              <div>Search Term: '{searchTerm}'</div>
+              <div className="mt-2 text-yellow-300">
+                📝 Open browser DevTools Console for detailed API logs
+              </div>
+            </div>
+          )}
+
+          {/* Stats Bar */}
+          {/* {!loading && !error && (
+            <div className="bg-white rounded-xl shadow-lg p-4 mb-8 border border-gray-100">
+              <div className="flex flex-wrap justify-center gap-6 text-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">
+                    Total Articles: <span className="font-bold text-gray-800">{postedData.length}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">
+                    Showing: <span className="font-bold text-gray-800">{filteredData.length}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={fetchPostedData}
+                    className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span className="text-sm font-medium">Refresh</span>
+                  </button>
+                  <button 
+                    onClick={testConnection}
+                    className="flex items-center gap-1 text-green-600 hover:text-green-800 transition-colors"
+                  >
+                    <span className="text-sm font-medium">Test API</span>
+                  </button>
+                  <button 
+                    onClick={() => setDebugMode(!debugMode)}
+                    className="flex items-center gap-1 text-purple-600 hover:text-purple-800 transition-colors"
+                  >
+                    <span className="text-sm font-medium">Debug</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )} */}
 
           {/* Loading State */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 lg:py-32">
-              <div className="relative mb-8">
-                <div className="w-20 h-20 border-4 border-blue-200 rounded-full"></div>
-                <div className="absolute top-0 left-0 w-20 h-20 border-4 border-blue-600 rounded-full animate-spin border-t-transparent"></div>
+            <div className="flex flex-col items-center justify-center py-16 lg:py-24">
+              <div className="relative mb-6">
+                <div className="w-16 h-16 border-4 border-blue-200 rounded-full"></div>
+                <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-600 rounded-full animate-spin border-t-transparent"></div>
               </div>
               <div className="text-center">
                 <h3 className="text-xl font-semibold text-gray-700 mb-2">
                   Loading Articles
                 </h3>
-                <p className="text-gray-500">
-                  Please wait while we fetch your content...
-                </p>
+                <p className="text-gray-500">Fetching your latest content...</p>
               </div>
             </div>
           ) : error ? (
-            // Enhanced Error State
-            <div className="text-center py-16 lg:py-24">
-              <div className="bg-gradient-to-br from-red-50 to-pink-50 border border-red-200 rounded-3xl p-8 max-w-md mx-auto shadow-lg">
-                <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                  <svg
-                    className="w-10 h-10 text-red-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                    />
-                  </svg>
+            // Error State
+            <div className="text-center py-12 lg:py-20">
+              <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-2xl p-6 max-w-md mx-auto shadow-lg">
+                <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
                 </div>
                 <h3 className="text-xl font-bold text-red-800 mb-2">
-                  Oops! Something went wrong
+                  Something went wrong
                 </h3>
-                <p className="text-red-600 mb-6">{error}</p>
+                <p className="text-red-600 mb-4">{error}</p>
                 <button
                   onClick={fetchPostedData}
-                  className="px-8 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl hover:from-red-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105 focus:ring-4 focus:ring-red-300 shadow-lg font-medium"
+                  className="px-6 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-lg hover:from-red-700 hover:to-rose-700 transition-all duration-300 transform hover:scale-105 focus:ring-4 focus:ring-red-300 shadow-lg font-medium"
                 >
                   Try Again
                 </button>
               </div>
             </div>
-          ) : postedData.length > 0 ? (
-            // Enhanced Articles Grid
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:gap-10">
-              {postedData.map((post, index) => (
+          ) : filteredData.length > 0 ? (
+            // Articles Grid
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {filteredData.map((post, index) => (
                 <article
                   key={post._id || index}
-                  className="group bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 flex flex-col transform"
+                  className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 flex flex-col transform hover:-translate-y-1"
                 >
                   {/* Image Section */}
-                  <div className="relative overflow-hidden rounded-t-2xl">
-                    <Link
-                      href={`/show-data/${post._id}`}
-                      target="_blank"
-                      className="block relative w-full h-48 sm:h-56 lg:h-64"
-                    >
-                      <Image
+                  <div className="relative overflow-hidden">
+                    <div className="aspect-video w-full">
+                      <img
                         src={getImageUrl(post.uploadPhoto)}
-                        alt={post.title}
-                        fill
-                        className="object-cover"
-                        unoptimized
+                        alt={post.title || "Article image"}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
+                    </div>
 
-                      {/* Multi-layered overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 "></div>
-                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 opacity-0 "></div>
+                    {/* Overlay with gradients */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                      {/* Article number badge */}
-                      <div className="absolute top-4 left-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white px-3 py-1.5 text-xs font-bold rounded-full shadow-lg backdrop-blur-sm border border-white/20">
-                        Article {index + 1}
-                      </div>
+                    {/* Article number badge */}
+                    <div className="absolute top-3 left-3 bg-gradient-to-r from-blue-600 to-[#2a3290] text-white px-2 py-1 text-xs font-bold rounded-lg shadow-lg">
+                      #{index + 1}
+                    </div>
 
-                      {/* Enhanced view indicator */}
-                      {/* <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md text-gray-700 px-3 py-1.5 text-xs rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 shadow-lg border border-gray-200">
-                        <Eye className="w-3.5 h-3.5" />
-                        <span className="font-medium">View Article</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </div> */}
-
-                      {/* Reading time badge */}
-                      {/* <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm text-white px-2.5 py-1 text-xs rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{getReadingTime(post.summary || post.articleContent)}</span>
-                      </div> */}
-                    </Link>
+                    {/* Reading time */}
+                    <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>
+                        {getReadingTime(post.summary || post.articleContent)}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Content Section */}
-                  <div className="p-6 flex flex-col flex-1">
-                    {/* Title */}
-                    <Link
-                      href={`/show-data/${post._id}`}
-                      target="_blank"
-                      className="block text-xl font-bold text-gray-800 mb-4 hover:text-blue-600 transition-colors duration-300 line-clamp-2 leading-tight group-hover:text-blue-600"
-                    >
-                      {post.title}
-                    </Link>
+                  <div className="p-4 flex flex-col flex-1">
+                    {/* Meta Info */}
+                    <div className="space-y-2 mb-4">
+                      {/* Title */}
+                      <h3 className="font-bold text-lg text-gray-800 mb-3 line-clamp-2 group-hover:text-[#2a3290] transition-colors duration-300">
+                        Title : {post.title || "Untitled Article"}
+                      </h3>
 
-                    {/* Enhanced Meta information */}
-                    <div className="flex flex-wrap items-center gap-3 mb-5">
-                      <div className="flex items-center gap-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-1.5 rounded-full border border-blue-100">
-                        <User className="w-3.5 h-3.5 text-blue-600" />
-                        <span className="text-xs font-medium text-blue-800">
-                          {post.name || "Anonymous"}
+                      
+                      {/* Author */}
+                      {post.name && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg">
+                            <User className="w-3 h-3 text-blue-600" />
+                            <span className="text-blue-800 font-bold">
+                              Author : {post.name}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      
+
+                      {/* Date and Category */}
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <div className="flex items-center gap-1">
+                          {post.category && (
+                            <span className="bg-blue-50 text-[#2a3290] px-2 py-1 rounded-lg font-medium">
+                              Category : {post.category}
+                            </span>
+                          )}
+                        </div>
+                        <span className="flex">
+                          <Calendar className="w-3 h-3" />
+
+                          {formatDate(post.publishedDate || post.createdAt)}
                         </span>
                       </div>
-                      
-                        <div className="flex items-center gap-1.5 bg-gradient-to-r from-purple-50 to-pink-50 px-3 py-1.5 rounded-full border border-purple-100">
-                          <Calendar className="w-3.5 h-3.5 text-purple-600" />
-                          <span className="text-xs font-medium text-purple-800">
-                            {dayjs(post.publishedDate).format("MMM D, YYYY")}
-                          </span>
-                        </div>
-                      
                     </div>
 
-                    {/* Enhanced Content preview */}
-                    <div className="flex-1 mb-6">
-                      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 rounded-xl border border-gray-100 shadow-inner">
+                    {/* Content Preview */}
+                    <div className="flex-1 mb-4">
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                         <p className="text-sm text-gray-700 leading-relaxed">
-                          {truncateText(post.summary || post.articleContent)}
+                          {truncateText(
+                            post.summary || post.articleContent || post.content
+                          )}
                         </p>
                       </div>
                     </div>
 
-                    {/* Enhanced Action buttons */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <Link
+                    {/* Additional Fields Display */}
+                    <div className="space-y-2 mb-4 text-xs">
+                      {post.tags && (
+                        <div className="flex flex-wrap gap-1">
+                          {post.tags.slice(0, 3).map((tag, idx) => (
+                            <span
+                              key={idx}
+                              className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* {post.status && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-gray-500">Status:</span>
+                          <span
+                            className={`px-2 py-1 rounded-lg font-medium ${
+                              post.status === "published"
+                                ? "bg-green-50 text-green-700"
+                                : post.status === "draft"
+                                ? "bg-yellow-50 text-yellow-700"
+                                : "bg-gray-50 text-gray-700"
+                            }`}
+                          >
+                            {post.status}
+                          </span>
+                        </div>
+                      )} */}
+
+                      {post.views && (
+                        <div className="flex items-center gap-1 text-gray-500">
+                          <Eye className="w-3 h-3" />
+                          <span>{post.views} views</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                      <a
                         href={`/show-data/${post._id}`}
                         target="_blank"
-                        className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-[#2a3290] rounded-lg hover:from-blue-700 hover:to-blue-900 transition-all duration-300 transform hover:scale-105 shadow-md"
                       >
                         <Eye className="w-4 h-4" />
-                        <span>Read More</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Link>
+                        <span>View</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
 
-                      {/* <div className="flex items-center gap-2">
+                      {/* <div className="flex items-center gap-1">
                         <button
-                          className="p-2.5 text-gray-400 hover:text-pink-500 hover:bg-pink-50 rounded-xl transition-all duration-300 transform hover:scale-110"
+                          className="p-2 text-gray-400 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-all duration-300 transform hover:scale-110"
                           title="Like Article"
                         >
                           <Heart className="w-4 h-4" />
                         </button>
+
                         <button
                           onClick={() => deleteArticle(post._id)}
-                          className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 transform hover:scale-110"
+                          disabled={deleteLoading === post._id}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-300 transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Delete Article"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {deleteLoading === post._id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
                         </button>
                       </div> */}
                     </div>
@@ -297,39 +505,34 @@ export default function PostedArticles() {
               ))}
             </div>
           ) : (
-            // Enhanced Empty State
-            <div className="text-center py-20 lg:py-32">
+            // Empty State
+            <div className="text-center py-16 lg:py-24">
               <div className="max-w-lg mx-auto">
-                <div className="relative mb-8">
-                  <div className="w-32 h-32 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto shadow-2xl">
-                    <svg
-                      className="w-16 h-16 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full animate-bounce"></div>
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+                  <BookOpen className="w-12 h-12 text-gray-400" />
                 </div>
 
                 <h3 className="text-2xl font-bold text-gray-800 mb-3">
-                  No Articles Yet!
+                  {searchTerm ? "No Articles Found" : "No Articles Yet!"}
                 </h3>
-                <p className="text-gray-600 mb-8 leading-relaxed">
-                  Your article collection is empty. Ready to share your thoughts
-                  with the world? Create your first masterpiece!
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                  {searchTerm
+                    ? `No articles match your search for "${searchTerm}". Try a different search term.`
+                    : "Your article collection is empty. Ready to share your thoughts with the world?"}
                 </p>
 
-                <button className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl font-semibold text-lg">
-                  Create Your First Article
-                </button>
+                {searchTerm ? (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold"
+                  >
+                    Clear Search
+                  </button>
+                ) : (
+                  <button className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg font-semibold">
+                    Create Your First Article
+                  </button>
+                )}
               </div>
             </div>
           )}

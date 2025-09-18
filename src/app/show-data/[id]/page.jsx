@@ -134,29 +134,30 @@ export default function ArticleDetail() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Background decoration */}
+     {/* Enhanced animated background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-r from-blue-300 to-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-r from-pink-300 to-orange-300 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse animation-delay-2000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-green-300 to-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-4000"></div>
       </div>
 
       <div className="relative z-10 py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           
           {/* Back Button */}
-          <button
+          {/* <button
             onClick={() => router.back()}
             className="mb-8 flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-white/80 backdrop-blur-sm hover:bg-white hover:text-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Articles</span>
-          </button>
+          </button> */}
 
           {/* Main Article Card */}
           <article className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
             
             {/* Hero Image */}
-            <div className="relative w-full h-64 sm:h-80 lg:h-96 overflow-hidden">
+            <div className="relative w-full h-80 sm:h-80 lg:h-96 overflow-hidden">
               <Image
                 src={getImageUrl(article.uploadPhoto)}
                 alt={article.title || "Article image"}
@@ -169,12 +170,12 @@ export default function ArticleDetail() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
               
               {/* Article category badge */}
-              {article.category && (
+              {/* {article.category && (
                 <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-semibold text-gray-800 shadow-lg">
                   <Tag className="w-4 h-4 inline mr-1" />
-                  {article.category}
+                  Category : {article.category}
                 </div>
-              )}
+              )} */}
             </div>
 
             {/* Article Content */}
@@ -182,7 +183,7 @@ export default function ArticleDetail() {
               
               {/* Article Title */}
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-6 leading-tight">
-                {article.title || "Untitled Article"}
+               Title :  {article.title || "Untitled Article"}
               </h1>
 
               {/* Meta Information */}
@@ -190,7 +191,7 @@ export default function ArticleDetail() {
                 <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full">
                   <User className="w-4 h-4 text-blue-600" />
                   <span className="text-sm font-medium text-blue-800">
-                    {article.name || "Anonymous Author"}
+                   Author : {article.name || "Anonymous Author"}
                   </span>
                 </div>
                 
@@ -203,20 +204,30 @@ export default function ArticleDetail() {
                   </div>
                 )}
                 
-                <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full">
+                {/* <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full">
                   <Clock className="w-4 h-4 text-green-600" />
                   <span className="text-sm font-medium text-green-800">
                     {getReadingTime(article.articleContent || article.summary)}
                   </span>
-                </div>
+                </div> */}
                 
                 {article.designation && (
                   <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-full">
                     <span className="text-sm font-medium text-orange-800">
-                      {article.designation}
+                    Designation : {article.designation}
                     </span>
                   </div>
                 )}
+  
+                 {article.category && (
+                  <div className="flex items-center gap-2 bg-pink-50 px-3 py-1.5 rounded-full">
+                    <span className="text-sm font-medium text-pink-800">
+                     Category : {article.category}
+                    </span>
+                  </div>
+                )}
+                
+
               </div>
 
               {/* Article Summary */}

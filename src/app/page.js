@@ -5,16 +5,19 @@ import Image from "next/image";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { IoIosArrowForward, IoIosArrowBack } from "react-icons/io";
 import LogoGrid from "./components/industryPartner";
 import Swal from "sweetalert2";
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
 
 // Dynamically import JoditEditor to avoid SSR issues
-const JoditEditor = dynamic(() => import('jodit-react'), { ssr: false });
+const JoditEditor = dynamic(() => import("jodit-react"), {
+  ssr: false,
+  loading: () => <p>Loading editor...</p>
+});
 
-export default function Home() {
+export default function Home({placeholder}) {
   //upload photo and article file state
   const [photo, setPhoto] = useState(null);
   const [articleFile, setArticleFile] = useState(null);
@@ -46,27 +49,43 @@ export default function Home() {
   const editor = useRef(null);
 
   // Jodit editor config
-  const config = {
-    readonly: false,
-    height: 400,
-    placeholder: 'Article Description',
-    toolbar: true,
-    spellcheck: true,
-    language: 'en',
-    toolbarButtonSize: 'medium',
-    theme: 'default',
-    saveModeInCookie: false,
-    buttons: [
-      'source', '|',
-      'bold', 'italic', 'underline', '|',
-      'ul', 'ol', '|',
-      'font', 'fontsize', 'brush', 'paragraph', '|',
-      'align', '|',
-      'undo', 'redo', '|',
-      'hr', 'link', 'table', '|',
-      'fullsize'
-    ]
-  };
+  const config = useMemo(
+    () => ({
+      readonly: false,
+      placeholder: placeholder || "Start typing...",
+      toolbarAdaptive: false,
+      toolbarSticky: false,
+      uploader: {
+        insertImageAsBase64URI: true,
+      },
+      // removeButtons: ['image'],
+      disablePlugins: "drag-and-drop-element",
+      controls: {
+        image: {
+          exec: function (editor) {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = "image/*";
+            input.onchange = function () {
+              const file = input.files[0];
+              const reader = new FileReader();
+              reader.onload = function (e) {
+                editor.selection.insertImage(e.target.result);
+              };
+              reader.readAsDataURL(file);
+            };
+            input.click();
+          },
+          icon: "image",
+          tooltip: "Insert Image",
+        },
+      },
+      style: {
+        textAlign: "left",
+      },
+    }),
+    [placeholder]
+  );
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -610,23 +629,17 @@ export default function Home() {
                 required
               />
 
-              <select
+              <input
                 className="w-full h-10 border py-2 px-2 rounded bg-white"
                 name="category"
                 id="category"
-                value={formData.category}
+                placeholder="Category"
+                // value={formData.category}
                 onChange={handleInputChange}
-                required
+                // required
               >
                 {/* Placeholder */}
-                <option value="" disabled hidden>
-                  Select Category*
-                </option>
-
-                <option value="tech">Tech</option>
-                <option value="business">Business</option>
-                <option value="lifestyle">Lifestyle</option>
-              </select>
+              </input>
 
               <input
                 className="w-full h-10 border py-6 px-2 rounded"
@@ -657,8 +670,8 @@ export default function Home() {
                   value={formData.article}
                   config={config}
                   tabIndex={1}
-                  onBlur={handleEditorChange}
-                  onChange={() => {}}
+                  onBlur={(newContent) => handleEditorChange(newContent)} // Fixed: pass the content
+                  onChange={(newContent) => handleEditorChange(newContent)} // Fixed: handle real-time changes
                 />
               </div>
 
