@@ -1,10 +1,11 @@
 "use client";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination } from "swiper/modules";
+import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import Image from "next/image";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import "swiper/css/autoplay";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { IoIosArrowForward, IoIosArrowBack } from "react-icons/io";
 import LogoGrid from "./components/industryPartner";
@@ -14,10 +15,10 @@ import dynamic from "next/dynamic";
 // Dynamically import JoditEditor to avoid SSR issues
 const JoditEditor = dynamic(() => import("jodit-react"), {
   ssr: false,
-  loading: () => <p>Loading editor...</p>
+  loading: () => <p>Loading editor...</p>,
 });
 
-export default function Home({placeholder}) {
+export default function Home({ placeholder }) {
   //upload photo and article file state
   const [photo, setPhoto] = useState(null);
   const [articleFile, setArticleFile] = useState(null);
@@ -374,6 +375,17 @@ export default function Home({placeholder}) {
     fetchArticles();
   }, []);
 
+  // Manual autoplay for mobile only
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (swiperRef.current && window.innerWidth < 640) {
+        swiperRef.current.slideNext();
+      }
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   const fetchArticles = async () => {
     try {
       setLoading(true);
@@ -439,30 +451,60 @@ export default function Home({placeholder}) {
     <div className="mx-auto flex justify-center bg-gray-100">
       <div className="min-h-screen flex flex-col bg-gray-50 pl-6 pr-6 pb-6 sm:pl-10 sm:pr-10 sm:pb-10 border-8 border-white w-full sm:w-4/5 lg:w-3/5 rounded-xl shadow-md">
         {/* Header */}
-        <header className="p-4">
-          <div className="max-w-4xl mx-auto flex items-center justify-center top-0">
-            <Image
-              src="/assets/image/IREEDLogo_New1.png"
-              alt="logo"
-              width={350}
-              height={200}
-              priority
-            />
-          </div>
-        </header>
+        <header className="w-full py-4">
+  <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6">
+    {/* Left Corner Logo */}
+    <Image
+      src="/assets/image/ireed-removebg-preview.png"
+      alt="IREED logo"
+      width={200}
+      height={200}
+      priority
+      className="w-28 sm:w-36 md:w-44 lg:w-52 h-auto"
+    />
+
+    {/* Right Corner Logo */}
+    <Image
+      src="/assets/image/Institute_of_Real_Estate_Education___Entrepreneurship_Development-removebg-preview.png"
+      alt="Institute logo"
+      width={240}
+      height={280}
+      priority
+      className="w-32 sm:w-40 md:w-48 lg:w-56 h-auto"
+    />
+  </div>
+</header>
+
 
         {/* Section: Insights */}
         <section className="flex-1 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">
-              Featured Real Estate Insights
-            </h2>
+            <div className="max-w-3xl mx-auto text-center px-4 ">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-gray-800 mb-2 leading-tight mt-4">
+                Expert Edge
+              </h2>
+              <div className="mx-auto justify-center items-center h-[3px] mb-1 mt[-4px] w-[100px] bg-[#004aad]"></div>
 
-            <p className="text-gray-600 text-base sm:text-lg mb-6">
-              Share Insights, Submit Impactful Articles, and Inspire the Real
-              Estate industry with Thought Leadership, Innovation, and
-              Real-World expertise.
-            </p>
+              <p className="text-gray-600 text-base sm:text-lg leading-relaxed mb-6">
+                <span className="block text-xl sm:text-2xl md:text-[15px]  text-[#004aad] mb-4">
+                  Be a Thought Leader | Share your Perspective | Inspire
+                  Industry Peers
+                </span>
+                Your knowledge and experiences can inspire, guide, and add
+                immense value to aspiring professionals and industry peers.{" "}
+                
+                {/* <span className="text-gray-800 font-medium"> */}
+                  Inviting top Corporate professionals and Entrepreneurs to
+                  contribute insightful articles on real estate, upcoming
+                  trends, technological innovations, leadership journeys, and
+                  more.
+                {/* </span> */}
+              </p>
+
+              {/* <button className="mt-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-medium rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition duration-300">
+                Contribute Now
+              </button> */}
+            </div>
 
             {/* Swiper Carousel */}
             <div className="max-w-6xl mx-auto px-2 sm:px-4 relative">
@@ -485,13 +527,18 @@ export default function Home({placeholder}) {
                 </div>
               ) : articles.length > 0 ? (
                 <Swiper
-                  modules={[Navigation, Pagination]}
+                  modules={[Navigation, Pagination, Autoplay]}
                   onBeforeInit={(swiper) => {
                     swiperRef.current = swiper;
                   }}
                   spaceBetween={20}
                   slidesPerView={1}
                   loop={true}
+                  autoplay={{
+                    delay: 3000,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true,
+                  }}
                   pagination={{
                     clickable: true,
                     dynamicBullets: true,
@@ -500,8 +547,14 @@ export default function Home({placeholder}) {
                     enabled: false,
                   }}
                   breakpoints={{
-                    640: { slidesPerView: 2 },
-                    1024: { slidesPerView: 3 },
+                    640: { 
+                      slidesPerView: 2,
+                      autoplay: false
+                    },
+                    1024: { 
+                      slidesPerView: 3,
+                      autoplay: false
+                    },
                   }}
                   className="articles-swiper"
                 >
@@ -629,17 +682,17 @@ export default function Home({placeholder}) {
                 required
               />
 
-              <input
+              {/* <input
                 className="w-full h-10 border py-2 px-2 rounded bg-white"
                 name="category"
                 id="category"
                 placeholder="Category"
-                // value={formData.category}
+                value={formData.category}
                 onChange={handleInputChange}
-                // required
+                required
               >
-                {/* Placeholder */}
-              </input>
+                Placeholder
+              </input> */}
 
               <input
                 className="w-full h-10 border py-6 px-2 rounded"
@@ -757,20 +810,46 @@ export default function Home({placeholder}) {
         .articles-swiper .swiper-pagination {
           position: static !important;
           margin-top: 1rem;
+          text-align: center !important;
+          display: flex !important;
+          justify-content: center !important;
         }
 
         .articles-swiper .swiper-pagination-bullet {
           background: #2563eb;
           opacity: 0.3;
+          margin: 0 4px;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
         }
 
         .articles-swiper .swiper-pagination-bullet-active {
           opacity: 1;
+          background: #2563eb;
         }
 
         @media (min-width: 640px) {
           .articles-swiper .swiper-pagination {
             display: none !important;
+          }
+        }
+
+        /* Ensure pagination bullets are centered on mobile */
+        @media (max-width: 639px) {
+          .articles-swiper .swiper-pagination {
+            position: static !important;
+            margin-top: 1rem !important;
+            text-align: center !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            padding: 0 !important;
+          }
+          
+          .articles-swiper .swiper-pagination-bullets {
+            display: flex !important;
+            justify-content: center !important;
           }
         }
 
