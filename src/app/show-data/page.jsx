@@ -367,6 +367,7 @@ export default function PostedArticles() {
                     {/* Reading time */}
                     <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white px-2 py-1 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
+
                       <span>
                         {getReadingTime(post.summary || post.articleContent)}
                       </span>
@@ -382,7 +383,6 @@ export default function PostedArticles() {
                         Title : {post.title || "Untitled Article"}
                       </h3>
 
-                      
                       {/* Author */}
                       {post.name && (
                         <div className="flex items-center gap-2 text-sm">
@@ -394,8 +394,6 @@ export default function PostedArticles() {
                           </div>
                         </div>
                       )}
-
-                      
 
                       {/* Date and Category */}
                       <div className="flex items-center justify-between text-xs text-gray-500">
@@ -418,9 +416,14 @@ export default function PostedArticles() {
                     <div className="flex-1 mb-4">
                       <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                         <p className="text-sm text-gray-700 leading-relaxed">
-                          {truncateText(
-                            post.summary || post.articleContent || post.content
-                          )}
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: truncateText(
+                                  post.articleContent ||
+                                  post.content
+                              ),
+                            }}
+                          />
                         </p>
                       </div>
                     </div>
