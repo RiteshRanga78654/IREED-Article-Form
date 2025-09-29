@@ -13,6 +13,7 @@
     "antd": "^5.27.3",
     "axios": "^1.12.2",
     "cloudinary": "^2.7.0",
+    "geist": "^1.5.1",
     "jodit-react": "^5.2.19",
     "lucide-react": "^0.544.0",
     "mongoose": "^8.18.1",

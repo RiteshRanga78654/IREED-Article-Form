@@ -382,7 +382,7 @@ export default function Home({ placeholder }) {
         swiperRef.current.slideNext();
       }
     }, 3000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -452,29 +452,28 @@ export default function Home({ placeholder }) {
       <div className="min-h-screen flex flex-col bg-gray-50 pl-6 pr-6 pb-6 sm:pl-10 sm:pr-10 sm:pb-10 border-8 border-white w-full sm:w-4/5 lg:w-3/5 rounded-xl shadow-md">
         {/* Header */}
         <header className="w-full py-4">
-  <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6">
-    {/* Left Corner Logo */}
-    <Image
-      src="/assets/image/ireed-removebg-preview.png"
-      alt="IREED logo"
-      width={200}
-      height={200}
-      priority
-      className="w-28 sm:w-36 md:w-44 lg:w-52 h-auto"
-    />
+          <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6">
+            {/* Left Corner Logo */}
+            <Image
+              src="/assets/image/ireed-removebg-preview.png"
+              alt="IREED logo"
+              width={200}
+              height={200}
+              priority
+              className="w-28 sm:w-38 md:w-44 lg:w-52 h-auto"
+            />
 
-    {/* Right Corner Logo */}
-    <Image
-      src="/assets/image/Institute_of_Real_Estate_Education___Entrepreneurship_Development-removebg-preview.png"
-      alt="Institute logo"
-      width={240}
-      height={280}
-      priority
-      className="w-32 sm:w-40 md:w-48 lg:w-56 h-auto"
-    />
-  </div>
-</header>
-
+            {/* Right Corner Logo */}
+            <Image
+              src="/assets/image/Institute_of_Real_Estate_Education___Entrepreneurship_Development-removebg-preview.png"
+              alt="Institute logo"
+              width={240}
+              height={280}
+              priority
+              className="w-[185px] sm:w-40 md:w-48 lg:w-56 h-auto"
+            />
+          </div>
+        </header>
 
         {/* Section: Insights */}
         <section className="flex-1 px-4 sm:px-6">
@@ -485,19 +484,24 @@ export default function Home({ placeholder }) {
               </h2>
               <div className="mx-auto justify-center items-center h-[3px] mb-1 mt[-4px] w-[100px] bg-[#004aad]"></div>
 
-              <p className="text-gray-600 text-base sm:text-lg leading-relaxed mb-6">
-                <span className="block text-xl sm:text-2xl md:text-[15px]  text-[#004aad] mb-4">
+              <p className="text-gray-600 text-base sm:text-lg leading-relaxed mb-6 ">
+                {/* Desktop / Tablet (inline text) */}
+                <span className="hidden sm:block text-xl sm:text-2xl md:text-[15px] text-[#004aad] mb-4">
                   Be a Thought Leader | Share your Perspective | Inspire
                   Industry Peers
                 </span>
+                {/* Mobile (stacked text) */}
+                <div className="block sm:hidden text-xl text-[#004aad] mb-4 space-y-1 sm:justify-text">
+                  <p>Be a Thought Leader |</p>
+                  <p>Share your Perspective |</p>
+                  <p>Inspire Industry Peers |</p>
+                </div>
                 Your knowledge and experiences can inspire, guide, and add
                 immense value to aspiring professionals and industry peers.{" "}
-                
                 {/* <span className="text-gray-800 font-medium"> */}
-                  Inviting top Corporate professionals and Entrepreneurs to
-                  contribute insightful articles on real estate, upcoming
-                  trends, technological innovations, leadership journeys, and
-                  more.
+                Inviting top Corporate professionals and Entrepreneurs to
+                contribute insightful articles on real estate, upcoming trends,
+                technological innovations, leadership journeys, and more.
                 {/* </span> */}
               </p>
 
@@ -547,13 +551,13 @@ export default function Home({ placeholder }) {
                     enabled: false,
                   }}
                   breakpoints={{
-                    640: { 
+                    640: {
                       slidesPerView: 2,
-                      autoplay: false
+                      autoplay: false,
                     },
-                    1024: { 
+                    1024: {
                       slidesPerView: 3,
-                      autoplay: false
+                      autoplay: false,
                     },
                   }}
                   className="articles-swiper"
@@ -846,7 +850,7 @@ export default function Home({ placeholder }) {
             align-items: center !important;
             padding: 0 !important;
           }
-          
+
           .articles-swiper .swiper-pagination-bullets {
             display: flex !important;
             justify-content: center !important;
