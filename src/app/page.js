@@ -683,7 +683,7 @@ export default function Home({ placeholder }) {
                 id="linkedinId"
                 value={formData.linkedinId}
                 onChange={handleInputChange}
-                required
+                // required
               />
 
               {/* <input
